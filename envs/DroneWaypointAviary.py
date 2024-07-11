@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import pybullet as p
 import pybullet_data
+from gymnasium import spaces
 
 from DroneProject.envs.DroneBaseRLAviary import DroneBaseRLAviary
 from DroneProject.utils.enums import DroneModel, Physics, ActionType, ObservationType, ImageType
@@ -54,7 +55,7 @@ class DroneWaypointAviary(DroneBaseRLAviary):
             The type of action space (1 or 3D; RPMS, thurst and torques, or waypoint with PID control)
 
         """
-        self.TARGET_POS = [np.array([0, 0, 1]), np.array([1, 1, 1])]
+        self.TARGET_POS = [np.array([0, 0, 1]), np.array([5, 0, 1])]
         self.current_target_index = 0
         self.EPISODE_LEN_SEC = 10
         super().__init__(drone_model=drone_model,
@@ -160,11 +161,65 @@ class DroneWaypointAviary(DroneBaseRLAviary):
         #### Advance the step counter ##############################
         self.step_counter = self.step_counter + (1 * self.PYB_STEPS_PER_CTRL)
         return obs, reward, terminated, truncated, info    
+    
+    ################################################################################
+
+    def _observationSpace(self):
+        if self.OBS_TYPE == ObservationType.KIN:
+            ############################################################
+            #### OBS SPACE OF SIZE 12
+            #### Observation vector ### X        Y        Z       Q1   Q2   Q3   Q4   R       P       Y       VX       VY       VZ       WX       WY       WZ
+            lo = -np.inf
+            hi = np.inf 
+            obs_lower_bound = np.array([[lo,lo,0, lo,lo,lo,lo,lo,lo,lo,lo,lo] ])
+            obs_upper_bound = np.array([[hi,hi,hi,hi,hi,hi,hi,hi,hi,hi,hi,hi] ])
+            #### Add action buffer to observation space ################
+            act_lo = -1
+            act_hi = +1
+            for i in range(self.ACTION_BUFFER_SIZE):
+                obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo,act_lo,act_lo,act_lo] for i in range(self.NUM_DRONES)])])
+                obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi,act_hi,act_hi,act_hi] for i in range(self.NUM_DRONES)])])
+            #### Add waypoint information to observation #######################
+            for wp in self.TARGET_POS:
+                waypoint_lower = np.array([[lo, lo, 0]] )
+                waypoint_upper = np.array([[hi, hi, 10]] )
+                obs_lower_bound = np.hstack([obs_lower_bound, waypoint_lower])
+                obs_upper_bound = np.hstack([obs_upper_bound, waypoint_upper])
+            return spaces.Box(low=obs_lower_bound, high=obs_upper_bound, dtype=np.float32)
+            ############################################################
+        else:
+            print("[ERROR] in BaseRLAviary._observationSpace()")
+    
+    ################################################################################
+
+    def _computeObs(self):
+        if self.OBS_TYPE == ObservationType.KIN:
+            ############################################################
+            #### OBS SPACE OF SIZE 12
+            obs_12 = np.zeros((self.NUM_DRONES,12))
+            for i in range(self.NUM_DRONES):
+                #obs = self._clipAndNormalizeState(self._getDroneStateVector(i))
+                obs = self._getDroneStateVector(i)
+                obs_12[i, :] = np.hstack([obs[0:3], obs[7:10], obs[10:13], obs[13:16]]).reshape(12,)
+            ret = np.array([obs_12[i, :] for i in range(self.NUM_DRONES)]).astype('float32')
+            #### Add action buffer to observation #######################
+            for i in range(self.ACTION_BUFFER_SIZE):
+                ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
+            #### Add waypoint information to observation #######################
+            for wp in self.TARGET_POS:
+                waypoint_data = np.array([wp[0], wp[1], wp[2]], dtype=np.float32).reshape(1, 3)
+                ret = np.hstack((ret, waypoint_data))  # Append each waypoint data to the observation vector
+
+            return ret
+            ############################################################
+        else:
+            print("[ERROR] in BaseRLAviary._computeObs()")
+
     ################################################################################
 
     def _updateTarget(self):
         current_pos = self._getDroneStateVector(0)[:3]
-        if np.linalg.norm(self.TARGET_POS[self.current_target_index] - current_pos) < 0.001:
+        if np.linalg.norm(self.TARGET_POS[self.current_target_index] - current_pos) < 0.1:
             self.current_target_index = (self.current_target_index + 1) % len(self.TARGET_POS)
 
     ################################################################################
@@ -180,10 +235,16 @@ class DroneWaypointAviary(DroneBaseRLAviary):
         """
         state = self._getDroneStateVector(0)
         current_target = self.TARGET_POS[self.current_target_index]
-        if self.current_target_index == 1:
-            ret = max(0, 2 - np.linalg.norm(current_target - state[0:3])**4) + 2
+        distance = np.linalg.norm(current_target - state[0:3])
+        tolerance = 0.01
+        if distance <= tolerance:
+            ret = max(0, 2 - distance**4) + 1
+        elif distance == 0:
+            ret = max(0, 2 - distance**4) + 5
+        elif distance >= tolerance:
+            ret = 2 - distance
         else:
-            ret = max(0, 2 - np.linalg.norm(current_target - state[0:3])**4)
+            ret = max(0, 2 - distance**4)
         return ret
 
     ################################################################################

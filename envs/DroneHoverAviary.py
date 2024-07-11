@@ -75,7 +75,14 @@ class DroneHoverAviary(DroneBaseRLAviary):
 
         """
         state = self._getDroneStateVector(0)
-        ret = max(0, 2 - np.linalg.norm(self.TARGET_POS-state[0:3])**4)
+        distance = np.linalg.norm(self.TARGET_POS - state[0:3])
+        tolerance = 0.01
+        if distance <= tolerance:
+            ret = max(0, 2 - distance**4) + 1
+        elif distance == 0:
+            ret = max(0, 2 - distance**4) + 5
+        else:
+            ret = max(0, 2 - distance**4)
         return ret
 
     ################################################################################
