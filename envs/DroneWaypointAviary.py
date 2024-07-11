@@ -236,15 +236,15 @@ class DroneWaypointAviary(DroneBaseRLAviary):
         state = self._getDroneStateVector(0)
         current_target = self.TARGET_POS[self.current_target_index]
         distance = np.linalg.norm(current_target - state[0:3])
-        tolerance = 0.01
+        tolerance = 0.5
         if distance <= tolerance:
             ret = max(0, 2 - distance**4) + 1
         elif distance == 0:
             ret = max(0, 2 - distance**4) + 5
         elif distance >= tolerance:
             ret = 2 - distance
-        else:
-            ret = max(0, 2 - distance**4)
+        # else:
+        #     ret = max(0, 2 - distance**4)
         return ret
 
     ################################################################################
