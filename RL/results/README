@@ -1,0 +1,3 @@
+Test2: add waypoint to Observation 
+    short time step: total_timesteps=int(1e4)
+    long time step: total_timesteps=int(1e7)

@@ -54,12 +54,12 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         os.makedirs(filename+'/')
 
     if not multiagent:
-        train_env = make_vec_env(DroneHoverAviary,
+        train_env = make_vec_env(DroneWaypointAviary,
                                  env_kwargs=dict(obs=DEFAULT_OBS, act=DEFAULT_ACT),
                                  n_envs=1,
                                  seed=0
                                  )
-        eval_env = DroneHoverAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
+        eval_env = DroneWaypointAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
     else:
         # train_env = make_vec_env(MultiHoverAviary,
         #                          env_kwargs=dict(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT),
@@ -76,7 +76,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     #### Train the model #######################################
     model = PPO('MlpPolicy',
                 train_env,
-                # tensorboard_log=filename+'/tb/',
+                tensorboard_log=filename+'/tb/',
                 verbose=1)
 
     #### Target cumulative rewards (problem-dependent) ##########
@@ -84,7 +84,8 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     #     target_reward = 474.15 if not multiagent else 949.5
     # else:
     #     target_reward = 467. if not multiagent else 920.
-    target_reward = 467. if not multiagent else 920.
+    # target_reward = 467. if not multiagent else 920.
+    target_reward = 500. if not multiagent else 920.    #Waypoint
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
                                                      verbose=1)
     eval_callback = EvalCallback(eval_env,
@@ -95,7 +96,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(1e5) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(1e7) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
                 log_interval=100)
 
@@ -127,11 +128,11 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
 
     #### Show (and record a video of) the model's performance ##
     if not multiagent:
-        test_env = DroneHoverAviary(gui=gui,
+        test_env = DroneWaypointAviary(gui=gui,
                                obs=DEFAULT_OBS,
                                act=DEFAULT_ACT,
                                record=record_video)
-        test_env_nogui = DroneHoverAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
+        test_env_nogui = DroneWaypointAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
     else:
         # test_env = MultiHoverAviary(gui=gui,
         #                                 num_drones=DEFAULT_AGENTS,
