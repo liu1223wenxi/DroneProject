@@ -57,7 +57,7 @@ class DroneWaypointAviary(DroneBaseRLAviary):
         """
         self.TARGET_POS = [np.array([0, 0, 1]), np.array([5, 0, 1])]
         self.current_target_index = 0
-        self.EPISODE_LEN_SEC = 10
+        self.EPISODE_LEN_SEC = 60
         super().__init__(drone_model=drone_model,
                          num_drones=1,
                          initial_xyzs=initial_xyzs,
@@ -233,18 +233,21 @@ class DroneWaypointAviary(DroneBaseRLAviary):
             The reward.
 
         """
+        # Version 2
         state = self._getDroneStateVector(0)
         current_target = self.TARGET_POS[self.current_target_index]
+        print("Current target:", current_target)
+        print("State:", state[0:3])
         distance = np.linalg.norm(current_target - state[0:3])
         tolerance = 0.5
         if distance <= tolerance:
             ret = max(0, 2 - distance**4) + 1
+        elif distance <= tolerance+2:
+            ret = max(0, 2 - distance**4)
         elif distance == 0:
             ret = max(0, 2 - distance**4) + 5
         elif distance >= tolerance:
             ret = 2 - distance
-        # else:
-        #     ret = max(0, 2 - distance**4)
         return ret
 
     ################################################################################
