@@ -154,7 +154,7 @@ class DroneWaypointAviary(DroneBaseRLAviary):
             #### Add waypoint information to observation #######################
             for wp in self.TARGET_POS:
                 waypoint_lower = np.array([[lo, lo, 0]] )
-                waypoint_upper = np.array([[hi, hi, 10]] )
+                waypoint_upper = np.array([[hi, hi, hi]] )
                 obs_lower_bound = np.hstack([obs_lower_bound, waypoint_lower])
                 obs_upper_bound = np.hstack([obs_upper_bound, waypoint_upper])
             return spaces.Box(low=obs_lower_bound, high=obs_upper_bound, dtype=np.float32)
