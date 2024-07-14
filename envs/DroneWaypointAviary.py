@@ -27,34 +27,6 @@ class DroneWaypointAviary(DroneBaseRLAviary):
                  obs: ObservationType=ObservationType.KIN,
                  act: ActionType=ActionType.RPM
                  ):
-        """Initialization of a single agent RL environment.
-
-        Using the generic single agent RL superclass.
-
-        Parameters
-        ----------
-        drone_model : DroneModel, optional
-            The desired drone type (detailed in an .urdf file in folder `assets`).
-        initial_xyzs: ndarray | None, optional
-            (NUM_DRONES, 3)-shaped array containing the initial XYZ position of the drones.
-        initial_rpys: ndarray | None, optional
-            (NUM_DRONES, 3)-shaped array containing the initial orientations of the drones (in radians).
-        physics : Physics, optional
-            The desired implementation of PyBullet physics/custom dynamics.
-        pyb_freq : int, optional
-            The frequency at which PyBullet steps (a multiple of ctrl_freq).
-        ctrl_freq : int, optional
-            The frequency at which the environment steps.
-        gui : bool, optional
-            Whether to use PyBullet's GUI.
-        record : bool, optional
-            Whether to save a video of the simulation.
-        obs : ObservationType, optional
-            The type of observation space (kinematic information or vision)
-        act : ActionType, optional
-            The type of action space (1 or 3D; RPMS, thurst and torques, or waypoint with PID control)
-
-        """
         self.TARGET_POS = [np.array([0, 0, 1]), np.array([5, 0, 1])]
         self.current_target_index = 0
         self.EPISODE_LEN_SEC = 60
@@ -219,37 +191,47 @@ class DroneWaypointAviary(DroneBaseRLAviary):
 
     def _updateTarget(self):
         current_pos = self._getDroneStateVector(0)[:3]
-        if np.linalg.norm(self.TARGET_POS[self.current_target_index] - current_pos) < 0.1:
+        if np.linalg.norm(self.TARGET_POS[self.current_target_index] - current_pos) < 0.4:
             self.current_target_index = (self.current_target_index + 1) % len(self.TARGET_POS)
 
     ################################################################################
 
     def _computeReward(self):
-        """Computes the current reward value.
-
-        Returns
-        -------
-        float
-            The reward.
-
-        """
-        # Version 2
+        # Version 3
         state = self._getDroneStateVector(0)
         current_target = self.TARGET_POS[self.current_target_index]
-        print("Current target:", current_target)
-        print("State:", state[0:3])
         distance = np.linalg.norm(current_target - state[0:3])
-        tolerance = 0.5
-        if distance <= tolerance:
-            ret = max(0, 2 - distance**4) + 1
-        elif distance <= tolerance+2:
-            ret = max(0, 2 - distance**4)
-        elif distance == 0:
-            ret = max(0, 2 - distance**4) + 5
-        elif distance >= tolerance:
-            ret = 2 - distance
-        return ret
 
+        # Reward
+        proximity_reward = max(0, 2 - distance**4)                  # Reward for being close to the waypoint
+
+        tolerance = 0.4
+        if distance <= tolerance:
+            reached_waypoint_reward = 100
+            self._updateTarget()
+            print("################Hey! Im heading the next waypoint!##################")
+            print("Current target:", current_target)
+        else:
+            reached_waypoint_reward = 0
+
+        # Penalty
+        penalty = 0
+        if abs(state[2] - current_target[2]) > 1.0:     # If it flight too high
+            penalty -= 10
+        
+        time_penalty = 0    #-0.01 * self.step_counter
+
+        # Total Reward
+        ret = proximity_reward + reached_waypoint_reward + penalty + time_penalty
+        if ret >= 100:
+            print(f"Proximity Reward: {proximity_reward}")
+            print(f"Reached Waypoint Reward: {reached_waypoint_reward}")
+            print(f"Penalty: {penalty}")
+            print(f"Time Penalty: {time_penalty}")
+            print(f"Total Reward: {ret}")
+
+        return ret
+    
     ################################################################################
     
     def _computeTerminated(self):
@@ -262,7 +244,7 @@ class DroneWaypointAviary(DroneBaseRLAviary):
 
         """
         state = self._getDroneStateVector(0)
-        if np.linalg.norm(self.TARGET_POS[-1] - state[0:3]) < 0.0001:
+        if np.linalg.norm(self.TARGET_POS[-1] - state[0:3]) < 0.01:
             return True
         else:
             return False

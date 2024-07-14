@@ -7,6 +7,7 @@ import numpy as np
 import gymnasium as gym
 from stable_baselines3 import PPO
 
+from DroneProject.envs.DroneHoverAviary import DroneHoverAviary
 from DroneProject.envs.DroneWaypointAviary import DroneWaypointAviary
 from DroneProject.utils.utils import sync
 
@@ -16,7 +17,7 @@ def run(gui=DEFAULT_GUI):
 
     test_env = DroneWaypointAviary(gui=gui)
     
-    zip_location = "/home/lwx/Reinforcement_Learning/DroneProject/RL/results/save-07.11.2024_15.47.45"
+    zip_location = "/home/lwx/Reinforcement_Learning/DroneProject/RL/results/save-07.13.2024_04.10.30"
     model_file = "best_model.zip"
     model = PPO.load(zip_location + "/" + model_file)
 

@@ -85,7 +85,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     # else:
     #     target_reward = 467. if not multiagent else 920.
     # target_reward = 467. if not multiagent else 920.
-    target_reward = 500. if not multiagent else 920.    #Waypoint
+    target_reward = 600. if not multiagent else 920.    #Waypoint
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
                                                      verbose=1)
     eval_callback = EvalCallback(eval_env,
@@ -96,7 +96,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(1e7) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(1e6) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
                 log_interval=100)
 
