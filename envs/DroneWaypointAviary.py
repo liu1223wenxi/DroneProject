@@ -246,6 +246,12 @@ class DroneWaypointAviary(DroneBaseRLAviary):
         state = self._getDroneStateVector(0)
         if np.linalg.norm(self.TARGET_POS[-1] - state[0:3]) < 0.01:
             return True
+        elif (abs(state[0]) > 1.5 or abs(state[1]) > 1.5 or state[2] > 2.0 # Truncate when the drone is too far away
+             or abs(state[7]) > .4 or abs(state[8]) > .4 # Truncate when the drone is too tilted
+        ):
+            return True
+        elif self.step_counter/self.PYB_FREQ > self.EPISODE_LEN_SEC:
+            return True
         else:
             return False
         
@@ -265,7 +271,7 @@ class DroneWaypointAviary(DroneBaseRLAviary):
              or abs(state[7]) > .4 or abs(state[8]) > .4 # Truncate when the drone is too tilted
         ):
             return True
-        if self.step_counter/self.PYB_FREQ > self.EPISODE_LEN_SEC:
+        elif self.step_counter/self.PYB_FREQ > self.EPISODE_LEN_SEC:
             return True
         else:
             return False

@@ -53,10 +53,11 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     if not os.path.exists(filename):
         os.makedirs(filename+'/')
 
+    num_gpu = 10
     if not multiagent:
         train_env = make_vec_env(DroneWaypointAviary,
                                  env_kwargs=dict(obs=DEFAULT_OBS, act=DEFAULT_ACT),
-                                 n_envs=1,
+                                 n_envs=num_gpu,
                                  seed=0
                                  )
         eval_env = DroneWaypointAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
